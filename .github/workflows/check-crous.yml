@@ -1,0 +1,40 @@
+name: Verification logement Crous Toulouse
+
+on:
+  schedule:
+    # Toutes les 5 minutes (minimum pratique fiable sur GitHub Actions)
+    - cron: '*/5 * * * *'
+  # Permet aussi de lancer une vérification manuelle depuis l'onglet "Actions"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Recuperer le code du depot
+        uses: actions/checkout@v4
+
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Installer les dependances
+        run: pip install -r requirements.txt
+
+      - name: Executer une verification du bot
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python3 crous_bot.py --once
+
+      - name: Sauvegarder l'etat des logements deja vus
+        run: |
+          git config user.name "crous-bot"
+          git config user.email "crous-bot@users.noreply.github.com"
+          git add seen_accommodations.json
+          git diff --cached --quiet || git commit -m "Mise a jour des logements deja vus"
+          git push
